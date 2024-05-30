@@ -14,50 +14,122 @@
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <style>
         .hidden { display: none; }
+        .table-container {
+            max-width: 450px;
+        }
+        .box-table {
+            max-width: 700px;
+            display: flex;
+        }
+         .box-table .result-table {
+            display: flex;
+            flex: 1;
+            margin-left: 20px;
+        }
+        @media (max-width: 768px) {
+            .content-container {
+                padding: 10px;
+            }
+            .result-container {
+                flex-direction: column;
+            }
+            .result-table {
+                margin-left: 0;
+                margin-top: 20px;
+            }
+        }
     </style>
 </head>
 <body>
     <div id="app">
-        <!-- UI 1-1 -->
-        <div v-if="!showResults" class="container">
+        <div class="container">
             <div class="d-flex justify-content-between align-items-center mt-3">
                 <img src="./assets/images/logo_1.png" alt="Logo">
-                <button class="btn btn-transparent btn-primary">
-                    Language <i class="bi bi-globe"></i>
+                <button class="btn btn-primary rounded-5">
+                    Language <i class="bi bi-globe ms-2"></i>
                 </button>
             </div>
-            <div class="d-flex justify-content-center mb-3">
-                <button class="btn btn-outline-transparent me-2" @click="view = 'standard'">查詢包裹</button>
-                <button class="btn btn-transparent" @click="view = 'unknown'">查詢不明包裹</button>
-            </div>
-            <h1 class="mt-5 text-center">您的包裹在哪？</h1>
-            <p class="text-center">請輸入包裹代碼</p>
-            <div class="d-flex justify-content-center">
-                <input type="text" v-model="trackingNumber" class="form-control w-50" placeholder="輸入物流單號">
-                <button class="btn btn-outline-transparent ms-2">
-                    <i class="bi bi-upc-scan"></i>
-                </button>
-            </div>
-            <div class="d-flex justify-content-center mt-3">
-                <button class="btn btn-secondary me-2" @click="clearInput">清除重填</button>
-                <button class="btn btn-primary" @click="fetchData">查詢</button>
-            </div>
-            <p class="text-center mt-3">輸入包裹查詢的啟用條款符合「*」或電子或是字母等符號。資料保留時間僅備三個月，您的系統無法查詢三個月之前的資料。</p>
-        </div>
-        <!-- UI 1-2 -->
-        <div v-if="showResults" class="container mt-5">
-            <div class="d-flex justify-content-between">
-                <div>
-                    <h1>物流狀態查詢結果</h1>
-                    <h2>物流單號: {{ data.shipmentNo }}</h2>
+
+            <div v-if="isPackageQuery">
+                <div class="d-flex justify-content-center">
+                    <div class="mt-3 table-container" :class="{ 'me-4': showResult }">
+                        <div class="d-flex justify-content-center mb-3">
+                            <ul class="nav nav-pills nav-fill gap-2 p-1 small bg-primary rounded-5 shadow-sm w-100" id="pillNav2" role="tablist" style="--bs-nav-link-color: var(--bs-white); --bs-nav-pills-link-active-color: var(--bs-primary); --bs-nav-pills-link-active-bg: var(--bs-white);">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link rounded-5" :class="{ 'active': isPackageQuery }" @click="toggleTab(true)">查詢包裹</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link rounded-5" :class="{ 'active': !isPackageQuery }" @click="toggleTab(false)">查詢不明包裹</button>
+                                </li>
+                            </ul>
+                        </div>
+                        <h1 class="mt-5 text-center">您的包裹在哪？</h1>
+                        <div class="d-flex justify-content-center flex-column text-center">
+                            <label for="logisticsNumber" class="form-label">請輸入包裹代碼</label>
+                            <div class="input-group w-100">
+                                <input type="text" v-model="logisticsNumber" class="form-control" placeholder="輸入物流單號">
+                                <button class="btn btn-outline-secondary" type="button">
+                                    <i class="bi bi-upc-scan"></i>
+                                    <span class="ms-2">QR</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-center mt-3">
+                            <button class="btn btn-secondary me-2 w-50" @click="clearInput">清除重填</button>
+                            <button class="btn btn-primary w-50" @click="queryLogistics">查詢</button>
+                        </div>
+                        <p class="text-center mt-3">
+                            輸入包裹查詢號碼時請勿輸入「-」或國字或是全形數字等符號。<br>
+                            資料保留時間僅為三個月，您將無法查詢三個月之前的資料。
+                        </p>
+                    </div>
+                    <div v-if="showResult" class="result-table">
+                        <div>
+                            <h4 class="mt-4">物流商：{{ logisticsProvider }}</h4>
+                            <table class="table table-bordered mt-4">
+                                <thead>
+                                    <tr>
+                                        <th>事件</th>
+                                        <th>時間</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="event in events" :key="event.event_time">
+                                        <td>{{ event.rtn_msg }}</td>
+                                        <td>{{ event.event_time }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
-                <button class="btn btn-outline-secondary" @click="showResults = false">返回</button>
             </div>
-            <ul class="list-group mt-4">
-                <li class="list-group-item" v-for="status in data.statuses" :key="status.id">
-                    <i class="bi bi-box-seam"></i> {{ status.status }} - {{ status.timestamp }}
-                </li>
-            </ul>
+
+            <div v-else>
+                <div class="d-flex justify-content-center mb-3">
+                    <ul class="nav nav-pills nav-fill gap-2 p-1 small bg-primary rounded-5 shadow-sm w-100" id="pillNav2" role="tablist" style="--bs-nav-link-color: var(--bs-white); --bs-nav-pills-link-active-color: var(--bs-primary); --bs-nav-pills-link-active-bg: var(--bs-white);">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link rounded-5" :class="{ 'active': isPackageQuery }" @click="toggleTab(true)">查詢包裹</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link rounded-5" :class="{ 'active': !isPackageQuery }" @click="toggleTab(false)">查詢不明包裹</button>
+                        </li>
+                    </ul>
+                </div>
+                <h3 class="mb-3">查詢不明包裹</h3>
+                <div class="mb-3">
+                    <label for="logisticsCompany" class="form-label">請輸入物流商名稱</label>
+                    <input type="text" class="form-control" id="logisticsCompany" v-model="logisticsCompany">
+                </div>
+                <div class="mb-3">
+                    <label for="logisticsNumber" class="form-label">貨運單號</label>
+                    <input type="text" class="form-control" id="logisticsNumber" v-model="logisticsNumber">
+                </div>
+                <div class="d-flex justify-content-between">
+                    <button class="btn btn-outline-secondary" @click="clearInput">清除重填</button>
+                    <button class="btn btn-primary" @click="queryLogistics">查詢</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -67,34 +139,31 @@
         createApp({
             data() {
                 return {
-                    trackingNumber: '',
-                    data: null,
-                    loading: false,
-                    error: false,
-                    showResults: false,
-                    view: 'standard',
+                    isPackageQuery: true,
+                    logisticsNumber: '',
+                    logisticsCompany: '',
+                    showResult: false,
+                    events: [],
+                    logisticsProvider: ''
                 };
             },
             methods: {
-                fetchData() {
-                    if (this.trackingNumber) {
-                        this.loading = true;
-                        axios.get(`https://wms.jenjan.com.tw/api/v4/public/logistics/status/${this.trackingNumber}`)
-                            .then(response => {
-                                this.data = response.data;
-                                this.showResults = true;
-                            })
-                            .catch(error => {
-                                console.error(error);
-                                this.error = true;
-                            })
-                            .finally(() => {
-                                this.loading = false;
-                            });
+                clearInput() {
+                    this.logisticsNumber = '';
+                    this.logisticsCompany = '';
+                },
+                async queryLogistics() {
+                    try {
+                        const response = await axios.get(`https://wms.jenjan.com.tw/api/v4/public/logistics/status/${this.logisticsNumber}`);
+                        this.events = response.data.tracking;
+                        this.logisticsProvider = response.data.logistics_provider;
+                        this.showResult = true;
+                    } catch (error) {
+                        console.error('Error fetching logistics data:', error);
                     }
                 },
-                clearInput() {
-                    this.trackingNumber = '';
+                toggleTab(isPackageQuery) {
+                    this.isPackageQuery = isPackageQuery;
                 }
             }
         }).mount('#app');
