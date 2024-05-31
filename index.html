@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>物流狀態查詢</title>
+    <!-- 引入 google font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@100..900&display=swap" rel="stylesheet">
     <!-- 引入 Bootstrap CSS -->
     <link rel="stylesheet" href="./assets/style/bootstrap.min.css">
     <!-- 引入 Bootstrap Icons -->
@@ -13,9 +17,12 @@
     <!-- 引入 Axios -->
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <style>
+        body {
+            font-family: "Noto Sans TC", sans-serif;
+        }
         .hidden { display: none; }
         .table-container {
-            max-width: 450px;
+            max-width: 410px;
         }
         .box-table {
             max-width: 700px;
@@ -25,18 +32,6 @@
             display: flex;
             flex: 1;
             margin-left: 20px;
-        }
-        @media (max-width: 768px) {
-            .content-container {
-                padding: 10px;
-            }
-            .result-container {
-                flex-direction: column;
-            }
-            .result-table {
-                margin-left: 0;
-                margin-top: 20px;
-            }
         }
     </style>
 </head>
@@ -51,7 +46,7 @@
             </div>
 
             <div v-if="isPackageQuery">
-                <div class="d-flex justify-content-center">
+                <div :class="[ 'd-flex mt-4', showResult ? 'justify-content-between' : 'justify-content-center', 'flex-column flex-md-row' ]">
                     <div class="mt-3 table-container" :class="{ 'me-4': showResult }">
                         <div class="d-flex justify-content-center mb-3">
                             <ul class="nav nav-pills nav-fill gap-2 p-1 small bg-primary rounded-5 shadow-sm w-100" id="pillNav2" role="tablist" style="--bs-nav-link-color: var(--bs-white); --bs-nav-pills-link-active-color: var(--bs-primary); --bs-nav-pills-link-active-bg: var(--bs-white);">
@@ -63,71 +58,76 @@
                                 </li>
                             </ul>
                         </div>
-                        <h1 class="mt-5 text-center">您的包裹在哪？</h1>
-                        <div class="d-flex justify-content-center flex-column text-center">
+                        <h1 :class="[ 'mt-5 mb-3', showResult ? 'text-start' : 'text-center' ]">您的包裹在哪？</h1>
+                        <div :class="[ 'd-flex flex-column', showResult ? 'text-start' : 'text-center', showResult ? 'align-items-start' : 'align-items-center' ]">
                             <label for="logisticsNumber" class="form-label">請輸入包裹代碼</label>
                             <div class="input-group w-100">
                                 <input type="text" v-model="logisticsNumber" class="form-control" placeholder="輸入物流單號">
-                                <button class="btn btn-outline-secondary" type="button">
+                                <button class="btn btn-outline-primary" type="button">
                                     <i class="bi bi-upc-scan"></i>
                                     <span class="ms-2">QR</span>
                                 </button>
                             </div>
                         </div>
                         <div class="d-flex justify-content-center mt-3">
-                            <button class="btn btn-secondary me-2 w-50" @click="clearInput">清除重填</button>
+                            <button class="btn btn-outline-primary me-2 w-50" @click="clearInput">清除重填</button>
                             <button class="btn btn-primary w-50" @click="queryLogistics">查詢</button>
                         </div>
-                        <p class="text-center mt-3">
+                        <h5 class="text-center mt-3">
                             輸入包裹查詢號碼時請勿輸入「-」或國字或是全形數字等符號。<br>
                             資料保留時間僅為三個月，您將無法查詢三個月之前的資料。
-                        </p>
+                        </h5>
                     </div>
                     <div v-if="showResult" class="result-table">
                         <div>
-                            <h4 class="mt-4">物流商：{{ logisticsProvider }}</h4>
-                            <table class="table table-bordered mt-4">
-                                <thead>
-                                    <tr>
-                                        <th>事件</th>
-                                        <th>時間</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-for="event in events" :key="event.event_time">
-                                        <td>{{ event.rtn_msg }}</td>
-                                        <td>{{ event.event_time }}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                            <div class="mt-3 rounded-top-1">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th class="bg-dark text-light">事件</th>
+                                            <th class="bg-dark text-light">時間</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="event in events" :key="event.event_time">
+                                            <td class="border border-0">{{ event.rtn_msg }}</td>
+                                            <td class="border border-0">{{ event.event_time }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <h4 class="mt-4">資料來源：{{ logisticsProvider }}</h4>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div v-else>
-                <div class="d-flex justify-content-center mb-3">
-                    <ul class="nav nav-pills nav-fill gap-2 p-1 small bg-primary rounded-5 shadow-sm w-100" id="pillNav2" role="tablist" style="--bs-nav-link-color: var(--bs-white); --bs-nav-pills-link-active-color: var(--bs-primary); --bs-nav-pills-link-active-bg: var(--bs-white);">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link rounded-5" :class="{ 'active': isPackageQuery }" @click="toggleTab(true)">查詢包裹</button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link rounded-5" :class="{ 'active': !isPackageQuery }" @click="toggleTab(false)">查詢不明包裹</button>
-                        </li>
-                    </ul>
-                </div>
-                <h3 class="mb-3">查詢不明包裹</h3>
-                <div class="mb-3">
-                    <label for="logisticsCompany" class="form-label">請輸入物流商名稱</label>
-                    <input type="text" class="form-control" id="logisticsCompany" v-model="logisticsCompany">
-                </div>
-                <div class="mb-3">
-                    <label for="logisticsNumber" class="form-label">貨運單號</label>
-                    <input type="text" class="form-control" id="logisticsNumber" v-model="logisticsNumber">
-                </div>
-                <div class="d-flex justify-content-between">
-                    <button class="btn btn-outline-secondary" @click="clearInput">清除重填</button>
-                    <button class="btn btn-primary" @click="queryLogistics">查詢</button>
+                <div class="d-flex justify-content-center mb-3 mt-4">
+                    <div class="table-container">
+                        <ul class="nav nav-pills nav-fill gap-2 p-1 small bg-primary rounded-5 shadow-sm w-100" id="pillNav2" role="tablist" style="--bs-nav-link-color: var(--bs-white); --bs-nav-pills-link-active-color: var(--bs-primary); --bs-nav-pills-link-active-bg: var(--bs-white);">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link rounded-5" :class="{ 'active': isPackageQuery }" @click="toggleTab(true)">查詢包裹</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link rounded-5" :class="{ 'active': !isPackageQuery }" @click="toggleTab(false)">查詢不明包裹</button>
+                            </li>
+                        </ul>
+                        <h3 class="mb-3">查詢不明包裹</h3>
+                        <div class="mb-3 w-100">
+                            <label for="logisticsCompany" class="form-label">請輸入物流商名稱</label>
+                            <input type="text" class="form-control" id="logisticsCompany" v-model="logisticsCompany">
+                        </div>
+                        <div class="mb-3 w-100">
+                            <label for="logisticsNumber" class="form-label">貨運單號</label>
+                            <input type="text" class="form-control" id="logisticsNumber" v-model="logisticsNumber">
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <button class="btn btn-outline-primary" @click="clearInput">清除重填</button>
+                            <button class="btn btn-primary" @click="queryLogistics">查詢</button>
+                        </div>
+                    </div>
+                    
                 </div>
             </div>
         </div>
